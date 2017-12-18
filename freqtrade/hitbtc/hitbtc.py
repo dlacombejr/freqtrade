@@ -64,28 +64,26 @@ def pretty_print_POST(req):
     ))
 
 
-def using_requests(request_url, apisign, request_type='GET', user=None, pswd=None):
-    r = None
+def using_requests(request_url, apisign, request_type='GET', data=None, user=None, pswd=None):
     if request_type == 'GET':
-        r = requests.get(
+        return requests.get(
             request_url,
             headers={"apisign": apisign},
             auth=(user, pswd)
         ).json()
     elif request_type == 'POST':
-        r = requests.post(
+        return requests.post(
             request_url,
             headers={"apisign": apisign},
-            auth=(user, pswd)
+            auth=(user, pswd),
+            data=data
         ).json()
     elif request_type == 'DELETE':
-        r = requests.delete(
+        return requests.delete(
             request_url,
             headers={"apisign": apisign},
             auth=(user, pswd)
         ).json()
-    pretty_print_POST(r.prepared())
-    return r
 
 
 class HitBTC(object):
@@ -129,7 +127,7 @@ class HitBTC(object):
 
             self.last_call = time.time()
 
-    def _api_query(self, protection=None, path_dict=None, options=None, request_type='GET'):
+    def _api_query(self, protection=None, path_dict=None, options=None, request_type='GET', data=None):
         """
         Queries HitBTC
 
@@ -166,7 +164,7 @@ class HitBTC(object):
 
            self.wait()
 
-           return self.dispatch(request_url, apisign, request_type, user=user, pswd=pswd)
+           return self.dispatch(request_url, apisign, request_type, data, user=user, pswd=pswd)
 
         except:
             return {
@@ -472,8 +470,8 @@ class HitBTC(object):
         """
         return self._api_query(path_dict={
             API_V2: '/order'
-        }, options={
-            'symbol': symbol,
+        }, data={
+            'symbol': symbol.lower(),
             'side': side,
             'type': type,
             'timeInForce': timeInForce,
