@@ -8,6 +8,10 @@ import arrow
 from freqtrade.exchange.bittrex import Bittrex
 from freqtrade.exchange.interface import Exchange
 
+# from freqtrade import OperationalException
+
+from freqtrade.exchange.hitbtc import HitBTC
+
 logger = logging.getLogger(__name__)
 
 # Current selected exchange
@@ -23,6 +27,7 @@ class Exchanges(enum.Enum):
     Maps supported exchange names to correspondent classes.
     """
     BITTREX = Bittrex
+    HITBTC = HitBTC
 
 
 def init(config: dict) -> None:
@@ -52,10 +57,10 @@ def init(config: dict) -> None:
     _API = exchange_class(exchange_config)
 
     # Check if all pairs are available
-    validate_pairs(config['exchange']['pair_whitelist'])
+    validate_pairs(config['exchange']['pair_whitelist'], config['exchange']['name'])
 
 
-def validate_pairs(pairs: List[str]) -> None:
+def validate_pairs(pairs: List[str], name: str) -> None:
     """
     Checks if all given pairs are tradable on the current exchange.
     Raises RuntimeError if one pair is not available.
@@ -65,11 +70,16 @@ def validate_pairs(pairs: List[str]) -> None:
     markets = _API.get_markets()
     stake_cur = _CONF['stake_currency']
     for pair in pairs:
-        if not pair.startswith(stake_cur):
+        pair_stake_cur = None
+        if name == 'bittrex':
+            pair_stake_cur = pair.startswith(stake_cur)
+        elif name == 'hitbtc':
+            pair_stake_cur = pair.endswith(stake_cur)
+        if not pair_stake_cur:
             raise RuntimeError(
                 'Pair {} not compatible with stake_currency: {}'.format(pair, stake_cur)
             )
-        if pair not in markets:
+        if pair not in markets and pair.replace('_', '') not in markets:
             raise RuntimeError('Pair {} is not available at {}'.format(pair, _API.name.lower()))
 
 
@@ -114,6 +124,13 @@ def get_balance(currency: str) -> float:
         return 999.9
 
     return _API.get_balance(currency)
+
+
+def get_available_balance(currency: str) -> float:
+    if _CONF['dry_run']:
+        return 999.9
+
+    return _API.get_available_balance(currency)
 
 
 def get_balances():
@@ -167,3 +184,7 @@ def get_sleep_time() -> float:
 
 def get_fee() -> float:
     return _API.fee
+
+
+def get_wallet_health() -> List[Dict]:
+    return _API.get_wallet_health()

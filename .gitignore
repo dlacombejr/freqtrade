@@ -74,6 +74,7 @@ target/
 .python-version
 
 config.json
+config*
 preprocessor.py
 *.sqlite
 
@@ -81,3 +82,6 @@ preprocessor.py
 .venv
 .idea
 .vscode
+
+.DS_Store
+*.pkl

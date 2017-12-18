@@ -18,6 +18,9 @@ hyperopt==0.1
 # do not upgrade networkx before this is fixed https://github.com/hyperopt/hyperopt/issues/325
 networkx==1.11
 tabulate==0.8.1
+pycrypto
+progressbar2==3.34.3
+tqdm==4.19.4
 
 # Required for plotting data
 #matplotlib==2.1.0

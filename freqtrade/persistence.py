@@ -30,13 +30,22 @@ def init(config: dict, engine: Optional[Engine] = None) -> None:
     """
     _CONF.update(config)
     if not engine:
-        if _CONF.get('dry_run', False):
-            engine = create_engine('sqlite://',
-                                   connect_args={'check_same_thread': False},
-                                   poolclass=StaticPool,
-                                   echo=False)
+        if _CONF['exchange']['name'] == 'hitbtc':
+            if _CONF.get('dry_run', False):
+                engine = create_engine('sqlite://',
+                                       connect_args={'check_same_thread': False},
+                                       poolclass=StaticPool,
+                                       echo=False)
+            else:
+                engine = create_engine('sqlite:///tradesv3_hitbtc.sqlite')
         else:
-            engine = create_engine('sqlite:///tradesv3.sqlite')
+            if _CONF.get('dry_run', False):
+                engine = create_engine('sqlite://',
+                                       connect_args={'check_same_thread': False},
+                                       poolclass=StaticPool,
+                                       echo=False)
+            else:
+                engine = create_engine('sqlite:///tradesv3.sqlite')
 
     session = scoped_session(sessionmaker(bind=engine, autoflush=True, autocommit=True))
     Trade.session = session()
@@ -68,14 +77,16 @@ class Trade(_DECL_BASE):
     open_date = Column(DateTime, nullable=False, default=datetime.utcnow)
     close_date = Column(DateTime)
     open_order_id = Column(String)
+    # open_order_type = Column(String)
 
     def __repr__(self):
-        return 'Trade(id={}, pair={}, amount={}, open_rate={}, open_since={})'.format(
+        return 'Trade(id={}, pair={}, amount={}, open_rate={}, open_since={}, opened_at={})'.format(
             self.id,
             self.pair,
             self.amount,
             self.open_rate,
-            arrow.get(self.open_date).humanize() if self.is_open else 'closed'
+            arrow.get(self.open_date).humanize() if self.is_open else 'closed',
+            self.open_date
         )
 
     def update(self, order: Dict) -> None:
@@ -101,6 +112,7 @@ class Trade(_DECL_BASE):
             raise ValueError('Unknown order type: {}'.format(order['type']))
 
         self.open_order_id = None
+        # self.open_order_type = None
 
     def calc_profit(self, rate: Optional[float] = None) -> float:
         """
@@ -111,4 +123,5 @@ class Trade(_DECL_BASE):
         """
         getcontext().prec = 8
         return float((Decimal(rate or self.close_rate) - Decimal(self.open_rate))
-                     / Decimal(self.open_rate) - Decimal(self.fee))
+                     / Decimal(self.open_rate) - Decimal(self.fee / 2. * self.open_rate)
+                     - Decimal(self.fee / 2. * (rate or self.close_rate)))
